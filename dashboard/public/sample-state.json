@@ -1,0 +1,158 @@
+{
+  "user": {
+    "email": "demo@example.com",
+    "cursor_version": "demo-build"
+  },
+  "xp": {
+    "total": 4821,
+    "level": 12,
+    "xp_current_level": 4287,
+    "xp_next_level": 5627,
+    "xp_progress_pct": 39,
+    "breakdown": {
+      "lines_added": 1200,
+      "files_edited": 450,
+      "tab_accepted": 300,
+      "sessions_completed": 600,
+      "daily_logins": 210,
+      "streak_bonuses": 225,
+      "commands_run": 180,
+      "test_passes": 220,
+      "build_successes": 176,
+      "agent_loops": 340,
+      "subagents_completed": 420,
+      "tool_calls": 300,
+      "compactions": 100,
+      "prompts_submitted": 100,
+      "achievements": 500
+    }
+  },
+  "streaks": {
+    "current_daily_streak": 9,
+    "longest_daily_streak": 23,
+    "last_active_date": "2026-03-31",
+    "current_clean_streak": 4
+  },
+  "achievements": {
+    "unlocked": [
+      {
+        "id": "first_edit",
+        "name": "Hello, World",
+        "unlocked_at": "2026-03-01T09:14:00Z",
+        "xp_awarded": 50
+      },
+      {
+        "id": "tab_master",
+        "name": "Tab Master",
+        "unlocked_at": "2026-03-15T14:30:00Z",
+        "xp_awarded": 100
+      }
+    ],
+    "in_progress": [
+      {
+        "id": "tab_lord",
+        "name": "Tab Lord",
+        "desc": "Accept 500 Tab completions",
+        "progress": 312,
+        "target": 500,
+        "progress_pct": 62
+      }
+    ],
+    "locked": [
+      {
+        "id": "zero_errors",
+        "name": "Clean Slate"
+      }
+    ]
+  },
+  "lifetime": {
+    "sessions_started": 142,
+    "sessions_completed": 128,
+    "sessions_aborted": 14,
+    "total_session_duration_ms": 18400000,
+    "prompts_submitted": 834,
+    "lines_added": 12430,
+    "lines_removed": 4210,
+    "files_edited": 389,
+    "unique_files": 204,
+    "tab_completions_accepted": 312,
+    "commands_run": 601,
+    "test_runs": 88,
+    "build_runs": 73,
+    "tool_calls_total": 1502,
+    "tool_calls_failed": 39,
+    "agent_loops_total": 67,
+    "subagents_completed": 28,
+    "compactions_triggered": 4,
+    "models_used": {
+      "claude-sonnet-4": 98,
+      "gpt-4o": 44,
+      "gpt-5": 31
+    },
+    "languages": {
+      "ts": 180,
+      "py": 95,
+      "go": 44,
+      "css": 22,
+      "sh": 18
+    }
+  },
+  "today": {
+    "date": "2026-03-31",
+    "xp_earned": 185,
+    "sessions": 3,
+    "lines_added": 220,
+    "tab_completions": 18,
+    "commands_run": 12,
+    "tool_calls": 34,
+    "active_projects": [
+      "demo-app",
+      "demo-api"
+    ]
+  },
+  "projects": {
+    "demo-app": {
+      "xp": 2910,
+      "level": 9,
+      "sessions": 84,
+      "lines_added": 7300,
+      "files_edited": 210,
+      "languages": {
+        "ts": 140,
+        "css": 18
+      },
+      "last_active": "2026-03-31"
+    },
+    "demo-api": {
+      "xp": 1911,
+      "level": 7,
+      "sessions": 58,
+      "lines_added": 5130,
+      "files_edited": 179,
+      "languages": {
+        "py": 95,
+        "sh": 18
+      },
+      "last_active": "2026-03-30"
+    }
+  },
+  "recent_events": [
+    {
+      "type": "achievement_unlocked",
+      "id": "tab_master",
+      "ts": "2026-03-31T14:30:00Z"
+    },
+    {
+      "type": "level_up",
+      "level": 12,
+      "ts": "2026-03-31T12:10:00Z"
+    },
+    {
+      "type": "xp_earned",
+      "amount": 25,
+      "reason": "subagentCompleted",
+      "ts": "2026-03-31T11:55:00Z"
+    }
+  ],
+  "last_aggregated_at": "2026-03-31T15:00:00Z"
+}

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "sessionEnd": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "afterFileEdit": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "afterTabFileEdit": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "afterShellExecution": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "postToolUse": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "postToolUseFailure": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "beforeSubmitPrompt": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "preCompact": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "afterAgentThought": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "stop": [{ "command": "~/.cursor/hooks/collector.sh" }],
+    "subagentStop": [{ "command": "~/.cursor/hooks/collector.sh" }]
+  }
+}
