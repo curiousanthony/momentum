@@ -26,6 +26,14 @@ chmod +x scripts/install.sh
 ./scripts/install.sh
 ```
 
+Default installs are intended to track the published `stable` channel.
+
+For local development, install explicitly in `dev-local` mode so your local work can diverge from the published build:
+
+```bash
+./scripts/install.sh --dev-local
+```
+
 The installer now merges the dashboard hooks into `~/.cursor/hooks.json` automatically and installs `~/.cursor/hooks/collector.sh`. Existing unrelated hooks are preserved.
 
 On first install, Momentum now also:
@@ -49,6 +57,15 @@ chmod +x scripts/dev-server.sh
 ```
 
 The runtime serves the dashboard from the same folder as `state.json`, so the app keeps same-origin access to both live and sample data.
+
+## Stable releases
+
+- Momentum now has a release-packaging helper at `scripts/package_runtime_release.py`.
+- Published stable builds are intended to ship as GitHub Release assets:
+  - `stable.json` as the public update manifest
+  - `momentum-<version>.tar.gz` as the runtime archive
+- The planned auto-update path should point installed `stable` environments at those published assets rather than at a local checkout.
+- Local development can remain intentionally different through a separate `dev-local` install/update path.
 
 ## Real vs sample data
 

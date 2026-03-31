@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -17,11 +19,22 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from aggregator.updater import (
+    InstalledVersion,
+    apply_update_archive,
+    download_archive,
+    evaluate_update,
+    fetch_manifest,
+    verify_archive_checksum,
+)
+
 DEFAULT_RUNTIME_PORT = 7420
 RUNTIME_CONFIG_FILE = "runtime-config.json"
 RUNTIME_STATE_FILE = "runtime-state.json"
 RUNTIME_OPEN_MARKER_FILE = "runtime-open-marker.json"
+RUNTIME_VERSION_FILE = "version.json"
 OPEN_ON_CURSOR_START_COOLDOWN_SECONDS = 30
+DEFAULT_UPDATE_MANIFEST_URL = os.environ.get("MOMENTUM_UPDATE_MANIFEST_URL", "")
 STARTUP_LAUNCH_AGENT_LABEL = "local.momentum.dashboard"
 SYSTEMD_UNIT_NAME = "momentum-dashboard.service"
 WINDOWS_STARTUP_SCRIPT_NAME = "momentum-dashboard.cmd"
@@ -33,6 +46,7 @@ class RuntimeConfig:
     open_on_cursor_start: bool = False
     first_install_open_completed: bool = False
     platform_registration: str = "unregistered"
+    update_manifest_url: str | None = None
 
 
 def default_runtime_dir() -> Path:
@@ -54,6 +68,47 @@ def runtime_open_marker_path(runtime_dir: Path | None = None) -> Path:
     return base_dir / RUNTIME_OPEN_MARKER_FILE
 
 
+def runtime_version_path(runtime_dir: Path | None = None) -> Path:
+    base_dir = runtime_dir or default_runtime_dir()
+    return base_dir / RUNTIME_VERSION_FILE
+
+
+def load_installed_version(runtime_dir: Path | None = None) -> InstalledVersion:
+    path = runtime_version_path(runtime_dir)
+    if not path.exists():
+        return InstalledVersion(channel="dev-local", version="dev", commit_sha=None)
+
+    data = json.loads(path.read_text())
+    return InstalledVersion(
+        channel=str(data.get("channel", "stable")),
+        version=str(data.get("version", "unknown")),
+        commit_sha=data.get("commit_sha"),
+    )
+
+
+def save_installed_version(
+    *,
+    version: str,
+    channel: str,
+    commit_sha: str | None,
+    runtime_dir: Path | None = None,
+) -> Path:
+    path = runtime_version_path(runtime_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "version": version,
+                "channel": channel,
+                "commit_sha": commit_sha,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    return path
+
+
 def load_runtime_config(runtime_dir: Path | None = None) -> RuntimeConfig:
     path = runtime_config_path(runtime_dir)
     if not path.exists():
@@ -65,6 +120,7 @@ def load_runtime_config(runtime_dir: Path | None = None) -> RuntimeConfig:
         open_on_cursor_start=bool(data.get("open_on_cursor_start", False)),
         first_install_open_completed=bool(data.get("first_install_open_completed", False)),
         platform_registration=str(data.get("platform_registration", "unregistered")),
+        update_manifest_url=data.get("update_manifest_url"),
     )
 
 
@@ -80,6 +136,20 @@ def load_open_marker(runtime_dir: Path | None = None) -> dict[str, float] | None
     if not path.exists():
         return None
     return json.loads(path.read_text())
+
+
+def load_runtime_state(runtime_dir: Path | None = None) -> dict[str, object]:
+    path = runtime_state_path(runtime_dir)
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text())
+
+
+def save_runtime_state(state: dict[str, object], runtime_dir: Path | None = None) -> Path:
+    path = runtime_state_path(runtime_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2) + "\n")
+    return path
 
 
 def write_open_marker(runtime_dir: Path | None = None) -> Path:
@@ -115,6 +185,86 @@ def should_open_on_cursor_start(config: RuntimeConfig, runtime_dir: Path | None 
     return (time.time() - last_opened_at) >= OPEN_ON_CURSOR_START_COOLDOWN_SECONDS
 
 
+def maybe_apply_stable_update(
+    runtime_dir: Path | None = None,
+    *,
+    manifest_url: str | None = None,
+) -> dict[str, object]:
+    runtime_dir = runtime_dir or default_runtime_dir()
+    installed = load_installed_version(runtime_dir)
+    config = load_runtime_config(runtime_dir)
+    active_manifest_url = manifest_url or config.update_manifest_url or DEFAULT_UPDATE_MANIFEST_URL
+
+    if installed.channel == "dev-local":
+        state = {
+            "installed_version": installed.version,
+            "installed_channel": installed.channel,
+            "latest_version": None,
+            "latest_channel": None,
+            "update_status": "managed-locally",
+        }
+        save_runtime_state(state, runtime_dir)
+        return state
+
+    if not active_manifest_url:
+        state = {
+            "installed_version": installed.version,
+            "installed_channel": installed.channel,
+            "latest_version": None,
+            "latest_channel": installed.channel,
+            "update_status": "unknown",
+        }
+        save_runtime_state(state, runtime_dir)
+        return state
+
+    try:
+        manifest = fetch_manifest(active_manifest_url)
+        decision = evaluate_update(
+            installed,
+            latest_version=manifest.version,
+            latest_channel=manifest.channel,
+        )
+        state: dict[str, object] = {
+            "installed_version": installed.version,
+            "installed_channel": installed.channel,
+            "latest_version": manifest.version,
+            "latest_channel": manifest.channel,
+            "update_status": "up-to-date" if not decision.should_update else "update-available",
+        }
+        if not decision.should_update:
+            save_runtime_state(state, runtime_dir)
+            return state
+
+        with tempfile.TemporaryDirectory(dir=runtime_dir.parent) as temp_dir_name:
+            archive_path = Path(temp_dir_name) / "momentum-update.tar.gz"
+            download_archive(manifest.archive_url, archive_path)
+            if not verify_archive_checksum(archive_path, manifest.sha256):
+                raise ValueError("downloaded update archive failed checksum verification")
+            apply_update_archive(runtime_dir, archive_path)
+
+        updated = load_installed_version(runtime_dir)
+        state.update(
+            {
+                "installed_version": updated.version,
+                "installed_channel": updated.channel,
+                "update_status": "updated",
+            }
+        )
+        save_runtime_state(state, runtime_dir)
+        return state
+    except Exception as exc:
+        state = {
+            "installed_version": installed.version,
+            "installed_channel": installed.channel,
+            "latest_version": None,
+            "latest_channel": None,
+            "update_status": "error",
+            "update_error": str(exc),
+        }
+        save_runtime_state(state, runtime_dir)
+        return state
+
+
 class RuntimeRequestHandler(SimpleHTTPRequestHandler):
     runtime_dir: Path
     server_port: int
@@ -125,9 +275,17 @@ class RuntimeRequestHandler(SimpleHTTPRequestHandler):
             return
         if self.path == "/api/runtime-config":
             config = load_runtime_config(self.runtime_dir)
+            installed = load_installed_version(self.runtime_dir)
+            runtime_state = load_runtime_state(self.runtime_dir)
             self._write_json(
                 {
                     **asdict(config),
+                    "installed_version": installed.version,
+                    "installed_channel": installed.channel,
+                    "installed_commit_sha": installed.commit_sha,
+                    "latest_version": runtime_state.get("latest_version"),
+                    "latest_channel": runtime_state.get("latest_channel"),
+                    "update_status": runtime_state.get("update_status", "unknown"),
                     "url": runtime_api_url(self.server_port),
                     "running": True,
                 }
@@ -149,6 +307,7 @@ class RuntimeRequestHandler(SimpleHTTPRequestHandler):
             open_on_cursor_start=bool(payload.get("open_on_cursor_start", config.open_on_cursor_start)),
             first_install_open_completed=config.first_install_open_completed,
             platform_registration=config.platform_registration,
+            update_manifest_url=config.update_manifest_url,
         )
         save_runtime_config(updated, self.runtime_dir)
         self._write_json(
@@ -202,16 +361,24 @@ def wait_for_runtime(port: int, attempts: int = 40, delay_seconds: float = 0.1) 
 def runtime_status(runtime_dir: Path | None = None) -> dict[str, object]:
     runtime_dir = runtime_dir or default_runtime_dir()
     config = load_runtime_config(runtime_dir)
+    installed = load_installed_version(runtime_dir)
+    runtime_state = load_runtime_state(runtime_dir)
     return {
         "running": runtime_health(config.port),
         "port": config.port,
         "url": runtime_api_url(config.port),
         "runtime_dir": str(runtime_dir),
+        "installed_version": installed.version,
+        "installed_channel": installed.channel,
+        "latest_version": runtime_state.get("latest_version"),
+        "latest_channel": runtime_state.get("latest_channel"),
+        "update_status": runtime_state.get("update_status", "unknown"),
     }
 
 
 def start_runtime(runtime_dir: Path | None = None, port: int | None = None) -> dict[str, object]:
     runtime_dir = runtime_dir or default_runtime_dir()
+    maybe_apply_stable_update(runtime_dir)
     config = load_runtime_config(runtime_dir)
     preferred_port = port or config.port
     if runtime_health(preferred_port):
@@ -229,6 +396,7 @@ def start_runtime(runtime_dir: Path | None = None, port: int | None = None) -> d
             open_on_cursor_start=config.open_on_cursor_start,
             first_install_open_completed=config.first_install_open_completed,
             platform_registration=config.platform_registration,
+            update_manifest_url=config.update_manifest_url,
         ),
         runtime_dir,
     )
@@ -252,9 +420,9 @@ def start_runtime(runtime_dir: Path | None = None, port: int | None = None) -> d
     if not wait_for_runtime(chosen_port):
         raise RuntimeError(f"Momentum runtime did not start on port {chosen_port}")
 
-    runtime_state_path(runtime_dir).write_text(
-        json.dumps({"port": chosen_port, "url": runtime_api_url(chosen_port)}, indent=2) + "\n"
-    )
+    runtime_state = load_runtime_state(runtime_dir)
+    runtime_state.update({"port": chosen_port, "url": runtime_api_url(chosen_port)})
+    save_runtime_state(runtime_state, runtime_dir)
     return {
         "started": True,
         "already_running": False,
@@ -289,6 +457,7 @@ def open_dashboard(
                 open_on_cursor_start=config.open_on_cursor_start,
                 first_install_open_completed=True,
                 platform_registration=config.platform_registration,
+                update_manifest_url=config.update_manifest_url,
             ),
             runtime_dir,
         )
@@ -494,6 +663,7 @@ def main(argv: list[str] | None = None) -> int:
                 open_on_cursor_start=config.open_on_cursor_start,
                 first_install_open_completed=config.first_install_open_completed,
                 platform_registration=registration_kind(sys.platform),
+                update_manifest_url=config.update_manifest_url,
             ),
             runtime_dir,
         )

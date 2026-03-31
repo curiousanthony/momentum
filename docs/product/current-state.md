@@ -41,10 +41,11 @@ Those details remain available, but they no longer define the default home path.
 
 - `dashboard/src/api.ts` fetches either real or sample data
 - `dashboard/src/data-source.ts` manages the real/sample toggle and persistent local storage setting
-- `dashboard/src/preferences.ts` manages the dashboard launch preference and syncs it with the local runtime
+- `dashboard/src/preferences.ts` manages dashboard launch preferences plus installed/update status from the local runtime
 - `dashboard/src/home.ts` renders the redesigned home as a dominant `Momentum Brief`, proof rail, compact support modules, and deeper-inspection links
 - `dashboard/src/app.ts` renders the dashboard shell, supporting tabs, and live refresh behavior
-- `aggregator/src/aggregator/runtime.py` serves the local dashboard, exposes `api/runtime-config`, and handles browser-open behavior
+- `aggregator/src/aggregator/runtime.py` serves the local dashboard, exposes `api/runtime-config`, handles browser-open behavior, and applies fail-open `stable` update checks
+- `aggregator/src/aggregator/updater.py` fetches the published manifest, evaluates channel-aware update decisions, verifies archives, and applies atomic runtime swaps
 - `dashboard/src/types.ts` defines the dashboard state contract, including interpreted insight signals and brief content
 
 ## What The UI Currently Shows
@@ -58,8 +59,9 @@ Those details remain available, but they no longer define the default home path.
 - unlocked, in-progress, and locked achievements
 - per-project stats
 - real vs sample data mode
-- a Settings tab with a toggle for opening Momentum automatically when Cursor starts
+- a Settings tab with a toggle for opening Momentum automatically when Cursor starts plus installed channel/version and update status
 - install-time startup registration plus a one-time browser open on first install
+- a default `stable` install path that can track published release assets, alongside an explicit `dev-local` path for local development
 
 ## Current Gaps
 
@@ -68,6 +70,7 @@ Those details remain available, but they no longer define the default home path.
 - stage-aware progression is not yet implemented
 - comeback and momentum systems still rely on first-pass framing rather than a fuller progression model
 - outcome interpretation remains early and should become more project-meaningful over time
+- the publish pipeline currently targets release assets and updater plumbing, but the canonical hosted `stable.json` URL still needs real deployment wiring when the first release is cut
 
 ## Related Docs
 

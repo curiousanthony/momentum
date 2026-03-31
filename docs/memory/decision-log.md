@@ -81,3 +81,13 @@
 
 - `Decision`: the aggregator/state contract should expose a durable interpreted `insights` object with signal strength, structured signals, and a `brief` payload for home rendering
 - `Why`: this keeps home interpretation factual, reusable, and consistent across the dashboard instead of relying on ad hoc UI-only wording built directly from raw counts
+
+### Use Published Stable Artifacts As The End-User Source Of Truth
+
+- `Decision`: end-user installs should track a published `stable` manifest plus versioned runtime archive built from `main`, while local development should use an explicit `dev-local` channel
+- `Why`: this keeps what users see aligned with shipped `main` releases without requiring manual commands, while protecting local development from being auto-overwritten by the stable updater
+
+### Make Runtime Updates Fail Open
+
+- `Decision`: the local runtime should check and apply `stable` updates conservatively, with bounded fetch/download behavior and a fail-open fallback that keeps serving the current install if anything goes wrong
+- `Why`: updater freshness matters, but the dashboard must remain reachable and trustworthy even when the network, manifest, or archive is unavailable or invalid

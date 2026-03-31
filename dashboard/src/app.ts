@@ -2,10 +2,12 @@ import { loadState } from "./api";
 import { loadStoredDataSource, saveDataSource, type DataSource } from "./data-source";
 import { renderHomeView, renderLanguageUsage, renderModelUsage, renderXpBreakdown } from "./home";
 import {
+  loadRuntimeInfo,
   loadRuntimePreferences,
   loadStoredPreferences,
   saveRuntimePreferences,
   saveStoredPreferences,
+  type DashboardRuntimeInfo,
   type DashboardPreferences,
 } from "./preferences";
 import { renderSettingsPanel, type SettingsStatus } from "./settings";
@@ -68,6 +70,13 @@ const ACH_ICONS: Record<string, string> = {
 let prevState: DashboardState | null = null;
 let currentSource: DataSource = loadStoredDataSource();
 let currentPreferences: DashboardPreferences = loadStoredPreferences();
+let currentRuntimeInfo: DashboardRuntimeInfo = {
+  installedVersion: "dev",
+  installedChannel: "dev-local",
+  latestVersion: null,
+  latestChannel: null,
+  updateStatus: "managed-locally",
+};
 let settingsStatus: SettingsStatus = null;
 const TAB_NAMES = ["overview", "achievements", "projects", "stats", "settings"] as const;
 type TabName = (typeof TAB_NAMES)[number];
@@ -250,7 +259,11 @@ function renderLifetime(s: DashboardState): void {
 }
 
 function renderSettings(): void {
-  $("tab-settings")!.innerHTML = renderSettingsPanel(currentPreferences, settingsStatus);
+  $("tab-settings")!.innerHTML = renderSettingsPanel(
+    currentPreferences,
+    currentRuntimeInfo,
+    settingsStatus,
+  );
 }
 
 export function renderShell(): string {
@@ -399,6 +412,7 @@ function syncSourceButtons(): void {
 async function hydrateRuntimePreferences(): Promise<void> {
   try {
     currentPreferences = await loadRuntimePreferences();
+    currentRuntimeInfo = await loadRuntimeInfo();
     saveStoredPreferences(currentPreferences);
     settingsStatus = null;
   } catch {

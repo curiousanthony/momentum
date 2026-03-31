@@ -13,6 +13,7 @@ The approved home redesign direction is now live in the dashboard. `Task 2` sele
 - dashboard UI exists
 - install now starts a local dashboard runtime and opens Momentum once on first install
 - users can opt into opening Momentum automatically on future Cursor starts from the dashboard `Settings` tab
+- installs now distinguish `stable` from `dev-local`, and the runtime can report installed/update state for Settings
 - home is now centered on a `Momentum Brief` instead of an equal-weight stats dashboard
 - the aggregator/state contract now includes interpreted `insights` signals and a `brief` payload
 - XP, levels, streaks, achievements, projects, lifetime stats, model usage, language usage, and recent activity still exist as supporting or deeper-inspection views
@@ -22,12 +23,14 @@ The approved home redesign direction is now live in the dashboard. `Task 2` sele
 - keep future work aligned with competence-first, insight-first gamification
 - preserve a clear distinction between shipped behavior and future opportunities
 - keep install-time accessibility high so new users can reach the dashboard immediately after setup
+- keep the published `stable` update path trustworthy without breaking explicit local-development installs
 - improve signal quality so the brief can say more only when evidence genuinely supports it
 - strengthen brief copy and interpretation from better underlying data, not from looser wording
 - keep deeper views available without letting raw metrics retake the main home path
 
 ## Next Recommended Discussions
 
+- release the first real published `stable.json` + runtime archive so the new updater path has a canonical public source
 - richer insight mechanics that explain improvement more clearly within the shipped `Momentum Brief`
 - stronger signal inputs and evidence selection so brief copy becomes more specific without becoming less honest
 - comeback and momentum system design that preserves low-pressure recovery framing
@@ -47,6 +50,7 @@ The approved home redesign direction is now live in the dashboard. `Task 2` sele
 - keep `Today`, streaks, recent activity, and project context compact and subordinate on home
 - keep `XP breakdown`, default language usage, and default model usage off the main home path unless they directly support the brief; they still belong in deeper inspection
 - allow low-confidence states to be shorter and calmer instead of filling space with weak claims
+- keep `dev-local` explicitly separate from the user-facing `stable` channel so local work is never auto-overwritten
 
 ## Canonical References
 

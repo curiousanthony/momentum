@@ -101,6 +101,13 @@ remain factual and traceable to source files.
 - `Source files`: `collector/collector.sh`, `aggregator/src/aggregator/runtime.py`, `dashboard/src/preferences.ts`, `dashboard/src/settings.ts`, `dashboard/src/app.ts`
 - `Notes`: the recurring auto-open toggle is exposed in `Settings`, mirrored in `localStorage`, synced through the local runtime API, and only acts on `sessionStart`
 
+## Stable Runtime Update Channel
+
+- `Status`: implemented
+- `User value`: keeps normal installs aligned with the latest published Momentum runtime without requiring manual commands, while still allowing explicit local development to diverge safely
+- `Source files`: `.github/workflows/publish-runtime.yml`, `scripts/package_runtime_release.py`, `scripts/install.sh`, `aggregator/src/aggregator/updater.py`, `aggregator/src/aggregator/runtime.py`, `dashboard/src/preferences.ts`, `dashboard/src/settings.ts`, `dashboard/src/app.ts`
+- `Notes`: stable releases now package a public `stable.json` manifest plus a versioned runtime archive; `stable` installs can check and apply updates through the local runtime, `dev-local` installs are labeled as locally managed, and Settings surfaces installed channel/version plus runtime-reported update state
+
 ## Lifetime Statistics View
 
 - `Status`: implemented

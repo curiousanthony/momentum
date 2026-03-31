@@ -2,6 +2,22 @@ export type DashboardPreferences = {
   openOnCursorStart: boolean;
 };
 
+export type RuntimeUpdateStatus =
+  | "unknown"
+  | "up-to-date"
+  | "update-available"
+  | "updated"
+  | "managed-locally"
+  | "error";
+
+export type DashboardRuntimeInfo = {
+  installedVersion: string;
+  installedChannel: string;
+  latestVersion: string | null;
+  latestChannel: string | null;
+  updateStatus: RuntimeUpdateStatus;
+};
+
 export const DASHBOARD_PREFERENCES_STORAGE_KEY = "momentum.preferences";
 
 export function loadStoredPreferences(): DashboardPreferences {
@@ -38,6 +54,33 @@ export async function loadRuntimePreferences(): Promise<DashboardPreferences> {
 
   const payload = (await res.json()) as { open_on_cursor_start?: boolean };
   return { openOnCursorStart: Boolean(payload.open_on_cursor_start) };
+}
+
+export async function loadRuntimeInfo(): Promise<DashboardRuntimeInfo> {
+  const res = await fetch("./api/runtime-config", { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("Could not load runtime info");
+  }
+
+  const payload = (await res.json()) as {
+    installed_version?: string;
+    installed_channel?: string;
+    latest_version?: string | null;
+    latest_channel?: string | null;
+    update_status?: RuntimeUpdateStatus;
+  };
+
+  const installedChannel = payload.installed_channel ?? "dev-local";
+
+  return {
+    installedVersion: payload.installed_version ?? "dev",
+    installedChannel,
+    latestVersion: payload.latest_version ?? null,
+    latestChannel: payload.latest_channel ?? null,
+    updateStatus:
+      payload.update_status ??
+      (installedChannel === "dev-local" ? "managed-locally" : "unknown"),
+  };
 }
 
 export async function saveRuntimePreferences(

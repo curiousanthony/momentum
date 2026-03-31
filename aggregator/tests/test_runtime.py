@@ -1,5 +1,7 @@
 import json
+import hashlib
 import socket
+import tarfile
 import threading
 import urllib.error
 import urllib.request
@@ -13,10 +15,13 @@ from aggregator.runtime import (
     default_runtime_dir,
     load_runtime_config,
     runtime_api_url,
+    maybe_apply_stable_update,
+    save_installed_version,
     save_runtime_config,
     should_open_on_cursor_start,
     should_open_on_install,
     maybe_open_on_session_start,
+    load_installed_version,
     write_open_marker,
 )
 
@@ -39,6 +44,7 @@ def test_save_runtime_config_persists_values(tmp_path: Path, monkeypatch):
             open_on_cursor_start=True,
             first_install_open_completed=True,
             platform_registration="launchagent",
+            update_manifest_url="https://example.com/releases/latest/download/stable.json",
         ),
         runtime_dir,
     )
@@ -48,6 +54,7 @@ def test_save_runtime_config_persists_values(tmp_path: Path, monkeypatch):
     assert stored["open_on_cursor_start"] is True
     assert stored["first_install_open_completed"] is True
     assert stored["platform_registration"] == "launchagent"
+    assert stored["update_manifest_url"] == "https://example.com/releases/latest/download/stable.json"
 
 
 def test_choose_port_keeps_preferred_port_when_available():
@@ -84,6 +91,68 @@ def test_should_open_on_install_only_when_marker_not_written(tmp_path: Path, mon
     save_runtime_config(RuntimeConfig(first_install_open_completed=True), runtime_dir)
 
     assert should_open_on_install(load_runtime_config(runtime_dir)) is False
+
+
+def test_load_installed_version_reads_version_metadata_when_present(tmp_path: Path):
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir(parents=True)
+    (runtime_dir / "version.json").write_text(
+        json.dumps(
+            {
+                "version": "1.2.3",
+                "channel": "stable",
+                "commit_sha": "abc123",
+            }
+        )
+    )
+
+    installed = load_installed_version(runtime_dir)
+
+    assert installed.version == "1.2.3"
+    assert installed.channel == "stable"
+    assert installed.commit_sha == "abc123"
+
+
+def test_load_installed_version_defaults_when_metadata_missing(tmp_path: Path):
+    installed = load_installed_version(tmp_path / "runtime")
+
+    assert installed.version == "dev"
+    assert installed.channel == "dev-local"
+    assert installed.commit_sha is None
+
+
+def test_save_installed_version_persists_stable_metadata(tmp_path: Path):
+    runtime_dir = tmp_path / "runtime"
+
+    save_installed_version(
+        version="1.2.3",
+        channel="stable",
+        commit_sha="abc123",
+        runtime_dir=runtime_dir,
+    )
+
+    installed = load_installed_version(runtime_dir)
+
+    assert installed.version == "1.2.3"
+    assert installed.channel == "stable"
+    assert installed.commit_sha == "abc123"
+
+
+def test_save_installed_version_persists_dev_local_metadata(tmp_path: Path):
+    runtime_dir = tmp_path / "runtime"
+
+    save_installed_version(
+        version="dev",
+        channel="dev-local",
+        commit_sha=None,
+        runtime_dir=runtime_dir,
+    )
+
+    installed = load_installed_version(runtime_dir)
+
+    assert installed.version == "dev"
+    assert installed.channel == "dev-local"
+    assert installed.commit_sha is None
 
 
 def test_runtime_server_exposes_health_and_runtime_config(tmp_path: Path):
@@ -149,6 +218,92 @@ def test_maybe_open_on_session_start_skips_when_disabled(tmp_path: Path, monkeyp
     assert open_calls == []
 
 
+def test_maybe_apply_stable_update_updates_stable_runtime(tmp_path: Path):
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    runtime_dir.joinpath("index.html").write_text("old")
+    save_runtime_config(
+        RuntimeConfig(update_manifest_url="https://example.com/releases/latest/download/stable.json"),
+        runtime_dir,
+    )
+    save_installed_version(
+        version="1.2.2",
+        channel="stable",
+        commit_sha="oldsha",
+        runtime_dir=runtime_dir,
+    )
+
+    manifest_url = _build_update_manifest(
+        tmp_path,
+        version="1.2.3",
+        archive_files={"index.html": "new", "version.json": '{"version":"1.2.3","channel":"stable"}'},
+    )
+
+    result = maybe_apply_stable_update(runtime_dir, manifest_url=manifest_url)
+
+    assert result["update_status"] == "updated"
+    assert load_installed_version(runtime_dir).version == "1.2.3"
+    assert runtime_dir.joinpath("index.html").read_text() == "new"
+    assert (
+        load_runtime_config(runtime_dir).update_manifest_url
+        == "https://example.com/releases/latest/download/stable.json"
+    )
+
+
+def test_maybe_apply_stable_update_skips_dev_local_installs(tmp_path: Path):
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    runtime_dir.joinpath("index.html").write_text("local")
+    save_installed_version(
+        version="dev",
+        channel="dev-local",
+        commit_sha=None,
+        runtime_dir=runtime_dir,
+    )
+
+    manifest_url = _build_update_manifest(
+        tmp_path,
+        version="1.2.3",
+        archive_files={"index.html": "new", "version.json": '{"version":"1.2.3","channel":"stable"}'},
+    )
+
+    result = maybe_apply_stable_update(runtime_dir, manifest_url=manifest_url)
+
+    assert result["update_status"] == "managed-locally"
+    assert runtime_dir.joinpath("index.html").read_text() == "local"
+
+
+def test_maybe_apply_stable_update_fails_open_when_archive_is_invalid(tmp_path: Path):
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    runtime_dir.joinpath("index.html").write_text("old")
+    save_installed_version(
+        version="1.2.2",
+        channel="stable",
+        commit_sha="oldsha",
+        runtime_dir=runtime_dir,
+    )
+
+    broken_archive = tmp_path / "broken.tar.gz"
+    broken_archive.write_bytes(b"not a tarball")
+    manifest_file = tmp_path / "stable.json"
+    manifest_file.write_text(
+        json.dumps(
+            {
+                "version": "1.2.3",
+                "channel": "stable",
+                "archive_url": broken_archive.as_uri(),
+                "sha256": "ignored",
+            }
+        )
+    )
+
+    result = maybe_apply_stable_update(runtime_dir, manifest_url=manifest_file.as_uri())
+
+    assert result["update_status"] == "error"
+    assert runtime_dir.joinpath("index.html").read_text() == "old"
+
+
 class _running_server:
     def __init__(self, runtime_dir: Path):
         self.runtime_dir = runtime_dir
@@ -184,3 +339,30 @@ def _post_json(url: str, payload: dict) -> dict:
     )
     with urllib.request.urlopen(request) as response:
         return json.loads(response.read().decode())
+
+
+def _build_update_manifest(tmp_path: Path, *, version: str, archive_files: dict[str, str]) -> str:
+    archive_root = tmp_path / f"archive-{version}"
+    payload_root = archive_root / "momentum"
+    payload_root.mkdir(parents=True)
+    for relative_path, contents in archive_files.items():
+        destination = payload_root / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(contents)
+
+    archive_path = tmp_path / f"momentum-{version}.tar.gz"
+    with tarfile.open(archive_path, "w:gz") as archive:
+        archive.add(payload_root, arcname="momentum")
+
+    manifest_file = tmp_path / f"stable-{version}.json"
+    manifest_file.write_text(
+        json.dumps(
+            {
+                "version": version,
+                "channel": "stable",
+                "archive_url": archive_path.as_uri(),
+                "sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+            }
+        )
+    )
+    return manifest_file.as_uri()
