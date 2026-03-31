@@ -1,0 +1,24 @@
+---
+description: Require docs-first discovery and Plan Mode before Momentum feature work
+alwaysApply: true
+---
+
+# Momentum Feature Workflow
+
+For any new feature, UX change, roadmap choice, or behavior-changing edit in this repo:
+
+1. Use `.cursor/skills/momentum-product-memory` first.
+2. Then use `.cursor/skills/momentum-feature-workflow`.
+
+Hard requirements:
+
+- Read the product-memory docs before touching code.
+- Summarize implemented, in-progress/discussing, and likely next work from docs.
+- Cite the docs that justify your recommendation.
+- Do not infer the roadmap from source code or recent edits.
+- Do not treat partial future-facing code as approval to build.
+- If the next step is unclear, brainstorm with the human before planning.
+- After brainstorming, switch to Plan Mode and write/refine the plan before implementation.
+- Do not implement during discovery or brainstorming.
+- Do not use prototypes or "small exploratory changes" to bypass the workflow.
+- Keep the written plan as the durable source of truth; if implementation goes badly, return to the plan rather than improvising a new direction in code.
