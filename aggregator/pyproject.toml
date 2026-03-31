@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cursor-dashboard-aggregator"
+name = "momentum-aggregator"
 version = "0.1.0"
 description = "Replay Cursor hook events.jsonl into gamified state.json"
 readme = "README.md"
@@ -14,7 +14,7 @@ dependencies = []
 dev = ["pytest>=8", "ruff>=0.4"]
 
 [project.scripts]
-cursor-dashboard-aggregate = "aggregator.__main__:main"
+momentum-aggregate = "aggregator.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

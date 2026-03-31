@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "cursor-dashboard-web",
+      "name": "momentum-web",
       "devDependencies": {
         "typescript": "~5.7.2",
         "vite": "^6.0.3",

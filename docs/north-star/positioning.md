@@ -2,7 +2,7 @@
 
 ## Product Category
 
-`Cursor Dashboard` is a personal progression system for the AI-native builder.
+`Momentum` is a personal progression system for the AI-native builder.
 
 It is not only:
 

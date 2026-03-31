@@ -7,7 +7,7 @@ tools by making invisible progress visible.
 
 ## Product Promise
 
-When someone opens `Cursor Dashboard`, they should feel:
+When someone opens `Momentum`, they should feel:
 
 > I understand how I'm growing with Cursor, I can see proof of progress, and I know how to keep leveling up.
 
@@ -19,7 +19,7 @@ That promise has three layers:
 
 ## Vision
 
-`Cursor Dashboard` becomes the trusted system of record for a developer's
+`Momentum` becomes the trusted system of record for a developer's
 AI-assisted growth:
 
 - from early experimentation

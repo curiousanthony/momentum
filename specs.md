@@ -1,4 +1,4 @@
-# Gamified Cursor Dashboard: Achievements + XP/Leveling System
+# Momentum: Achievements + XP/Leveling System
 
 Here is a full design covering data collection, schema, scoring logic, and dashboard structure.
 
@@ -897,7 +897,7 @@ Then open `http://localhost:7420/dashboard.html`.
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Cursor Dashboard</title>
+		<title>Momentum</title>
 		<style>
 			/* ── Reset & base ──────────────────────────────────────── */
 			*,
@@ -1333,7 +1333,7 @@ Then open `http://localhost:7420/dashboard.html`.
 
 		<!-- ── Header ────────────────────────────────────────────────── -->
 		<div class="header">
-			<h1>Cursor Dashboard</h1>
+			<h1>Momentum</h1>
 			<div style="display:flex;gap:8px;align-items:center">
 				<span class="user-pill" id="user-email">loading...</span>
 				<button class="refresh-btn" onclick="loadState()">Refresh</button>

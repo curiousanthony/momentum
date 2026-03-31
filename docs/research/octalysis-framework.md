@@ -5,7 +5,7 @@
 The Octalysis Framework organizes motivation into eight core drives and
 distinguishes between more sustainable motivation and more manipulative pressure.
 
-For `Cursor Dashboard`, the most relevant drives are:
+For `Momentum`, the most relevant drives are:
 
 - `CD2 Development and Accomplishment`
 - `CD3 Empowerment of Creativity and Feedback`

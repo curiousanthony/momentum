@@ -2,7 +2,7 @@
 
 Momentum helps developers unlock achievements, track their progress, and maintain momentum while using agentic coding tools.
 
-Gamified local dashboard for Cursor: hooks → `events.jsonl` → aggregated `state.json` → web UI.
+Gamified local dashboard for agentic coding tools: hooks → `events.jsonl` → aggregated `state.json` → web UI.
 
 ## Prerequisites
 

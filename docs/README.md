@@ -1,6 +1,6 @@
-# Cursor Dashboard Docs
+# Momentum Docs
 
-This documentation system is the durable product memory for `Cursor Dashboard`.
+This documentation system is the durable product memory for `Momentum`.
 It captures why the product exists, who it serves, what research should guide design,
 what is implemented today, and how future agents should reason about next steps.
 

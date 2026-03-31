@@ -10,7 +10,7 @@ The repository already implements a local data pipeline and a web dashboard:
 
 ## Current Product Character
 
-Today, `Cursor Dashboard` is a functioning local gamified dashboard with real live
+Today, `Momentum` is a functioning local gamified dashboard with real live
 data support. It already exposes XP, levels, streaks, achievements, per-project
 stats, daily activity, model usage, and a recent activity feed.
 

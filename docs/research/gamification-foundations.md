@@ -14,7 +14,7 @@ Key takeaways:
 
 ## Interpretation
 
-`Cursor Dashboard` should use deep gamification. The mechanics should reinforce a
+`Momentum` should use deep gamification. The mechanics should reinforce a
 real growth narrative:
 
 - becoming better with Cursor

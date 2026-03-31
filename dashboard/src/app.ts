@@ -344,7 +344,7 @@ function shell(): string {
   return `
 <div id="toast-container" aria-live="polite"></div>
 <header class="header">
-  <h1>Cursor Dashboard</h1>
+  <h1>Momentum</h1>
   <div class="header-actions">
     <div class="source-toggle" role="group" aria-label="Dashboard data source">
       <button type="button" class="source-btn" data-source="real">Real</button>

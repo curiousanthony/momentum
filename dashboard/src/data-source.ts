@@ -1,6 +1,6 @@
 export type DataSource = "real" | "sample";
 
-export const DATA_SOURCE_STORAGE_KEY = "cursor-dashboard.data-source";
+export const DATA_SOURCE_STORAGE_KEY = "momentum.data-source";
 
 export function getDataSourceUrl(source: DataSource): string {
   switch (source) {

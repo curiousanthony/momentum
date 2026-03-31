@@ -6,7 +6,7 @@ DASH="${HOME}/.cursor/dashboard"
 HOOKS="${HOME}/.cursor/hooks"
 HOOKS_JSON="${HOME}/.cursor/hooks.json"
 
-echo "Installing Cursor Dashboard from ${ROOT}"
+echo "Installing Momentum from ${ROOT}"
 
 if [[ ! -d "${ROOT}/dashboard/dist" ]]; then
   echo "dashboard/dist missing. Run: cd dashboard && bun install && bun run build" >&2

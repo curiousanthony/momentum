@@ -2,7 +2,7 @@
 
 ## Current Direction
 
-`Cursor Dashboard` is being repositioned as a premium, insight-rich progression system for the AI-native builder. The product should help developers grow from early experimentation into confident, high-leverage Cursor usage.
+`Momentum` is being positioned as a premium, insight-rich progression system for the AI-native builder. The product should help developers grow from early experimentation into confident, high-leverage Cursor usage.
 
 ## Implemented Baseline
 

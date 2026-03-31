@@ -11,7 +11,7 @@ industry syntheses repeatedly point to:
 - ownership
 - purpose and usefulness
 
-This matters because `Cursor Dashboard` is aimed at serious engineers, founders,
+This matters because `Momentum` is aimed at serious engineers, founders,
 and ambitious builders rather than a generic consumer audience.
 
 ## Interpretation
