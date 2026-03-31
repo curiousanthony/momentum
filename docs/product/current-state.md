@@ -6,21 +6,18 @@ The repository already implements a local data pipeline and a web dashboard:
 
 - a global hook collector appends Cursor events to local `events.jsonl`
 - an aggregator replays those events into `state.json`
-- a static Bun/Vite dashboard reads that state and renders user-facing cards
+- a local dashboard runtime serves the static Bun/Vite app over HTTP and renders user-facing cards
 
 ## Current Product Character
 
-Today, `Momentum` is a functioning local gamified dashboard with real live
-data support. It already exposes XP, levels, streaks, achievements, per-project
-stats, daily activity, model usage, and a recent activity feed.
+Today, `Momentum` is no longer just a stats-first gamified dashboard. The
+primary home experience is now a guidance-led `Momentum Brief` that interprets
+recent activity into a concise editorial-style summary, then supports that brief
+with restrained proof, compact cadence context, and deeper inspection paths.
 
-What is missing is not the baseline product loop. What is missing is the durable
-documentation and product memory layer that explains:
-
-- the north star
-- the intended personas
-- the research-backed design principles
-- the roadmap and current decision state
+The product still includes XP, levels, streaks, achievements, per-project
+stats, lifetime statistics, language usage, model usage, and recent activity.
+Those details remain available, but they no longer define the default home path.
 
 ## Implemented Architecture
 
@@ -30,42 +27,50 @@ documentation and product memory layer that explains:
 - it enriches events with `_ts` and `_project`
 - it appends normalized JSON lines to the local dashboard log
 - it triggers the aggregator in the background when the installed aggregate script exists
+- on `sessionStart`, it can ask the runtime to open the dashboard if the user enabled that setting
 
 ### Aggregation Layer
 
 - `aggregator/src/aggregator/replay.py` replays hook events into lifetime metrics, per-day metrics, per-project metrics, XP, and behavior signals
 - `aggregator/src/aggregator/achievements.py` evaluates unlocks and progress against the achievement catalog
-- `aggregator/src/aggregator/state.py` merges replay output with prior state and emits the final dashboard schema
+- `aggregator/src/aggregator/insights.py` interprets replayed metrics into conservative insight signals and a `Momentum Brief` payload
+- `aggregator/src/aggregator/state.py` merges replay output with prior state and emits the final dashboard schema, including interpreted `insights`
 - `aggregator/src/aggregator/xp.py` defines XP constants and the level curve
 
 ### Dashboard Layer
 
 - `dashboard/src/api.ts` fetches either real or sample data
 - `dashboard/src/data-source.ts` manages the real/sample toggle and persistent local storage setting
-- `dashboard/src/app.ts` renders the dashboard shell, cards, tabs, and live refresh behavior
-- `dashboard/src/types.ts` defines the current dashboard state contract
+- `dashboard/src/preferences.ts` manages dashboard launch preferences plus installed/update status from the local runtime
+- `dashboard/src/home.ts` renders the redesigned home as a dominant `Momentum Brief`, proof rail, compact support modules, and deeper-inspection links
+- `dashboard/src/app.ts` renders the dashboard shell, supporting tabs, and live refresh behavior
+- `aggregator/src/aggregator/runtime.py` serves the local dashboard, exposes `api/runtime-config`, handles browser-open behavior, and applies fail-open `stable` update checks
+- `aggregator/src/aggregator/updater.py` fetches the published manifest, evaluates channel-aware update decisions, verifies archives, and applies atomic runtime swaps
+- `dashboard/src/types.ts` defines the dashboard state contract, including interpreted insight signals and brief content
 
 ## What The UI Currently Shows
 
-- level and XP progress
-- current and longest streaks plus clean streak
-- today's XP, sessions, lines, tab completions, commands, and tool calls
-- XP breakdown by source
-- recent activity feed
-- language usage
-- model usage
+- a dominant `Momentum Brief` hero with interpreted headline, summary, validation, cadence, and optional focus direction
+- a restrained proof rail that substantiates the brief with selected evidence
+- compact `Today` and cadence support modules
+- quieter summaries for recent changes and project context
+- deeper-inspection entry points for achievements, projects, lifetime stats, and settings
+- lifetime statistics, including `XP Sources`, `Languages Edited`, and `Models`
 - unlocked, in-progress, and locked achievements
 - per-project stats
-- lifetime statistics
 - real vs sample data mode
+- a Settings tab with a toggle for opening Momentum automatically when Cursor starts plus installed channel/version and update status
+- install-time startup registration plus a one-time browser open on first install
+- a default `stable` install path that can track published release assets, alongside an explicit `dev-local` path for local development
 
 ## Current Gaps
 
-- no explicit north-star documentation
-- no durable persona documentation
-- no research archive for gamification and motivation decisions
-- no canonical project memory or handoff workflow
-- no documented status model for ideas, plans, and shipped work
+- signal quality is still conservative and should get richer before the product makes stronger claims
+- brief copy quality is still bounded by the strength of the current interpreted signals and recent event evidence
+- stage-aware progression is not yet implemented
+- comeback and momentum systems still rely on first-pass framing rather than a fuller progression model
+- outcome interpretation remains early and should become more project-meaningful over time
+- the publish pipeline currently targets release assets and updater plumbing, but the canonical hosted `stable.json` URL still needs real deployment wiring when the first release is cut
 
 ## Related Docs
 

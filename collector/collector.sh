@@ -7,6 +7,7 @@ set -euo pipefail
 LOG_DIR="${CURSOR_DASHBOARD_LOG_DIR:-$HOME/.cursor/dashboard}"
 LOG_FILE="${CURSOR_DASHBOARD_LOG_FILE:-$LOG_DIR/events.jsonl}"
 AGGREGATE_PY="${CURSOR_DASHBOARD_AGGREGATE:-$HOME/.cursor/dashboard/aggregate.py}"
+RUNTIME_DIR="${CURSOR_DASHBOARD_RUNTIME_DIR:-$HOME/.cursor/dashboard}"
 
 raw="$(cat || true)"
 if [[ -z "${raw// }" ]]; then
@@ -15,7 +16,7 @@ fi
 
 mkdir -p "$LOG_DIR"
 
-RAW_PAYLOAD="$raw" python3 - "$LOG_FILE" "$AGGREGATE_PY" <<'PY'
+RAW_PAYLOAD="$raw" python3 - "$LOG_FILE" "$AGGREGATE_PY" "$RUNTIME_DIR" <<'PY'
 import json
 import subprocess
 import sys
@@ -24,6 +25,7 @@ from pathlib import Path
 
 log_file = Path(sys.argv[1])
 aggregate_py = Path(sys.argv[2])
+runtime_dir = Path(sys.argv[3])
 raw = __import__("os").environ.get("RAW_PAYLOAD", "")
 
 try:
@@ -47,6 +49,21 @@ with log_file.open("a", encoding="utf-8") as fh:
 if aggregate_py.is_file():
     subprocess.Popen(
         [sys.executable, str(aggregate_py)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+if payload.get("hook_event_name") == "sessionStart":
+    subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "aggregator.runtime",
+            "maybe-open-on-session-start",
+            "--runtime-dir",
+            str(runtime_dir),
+        ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
