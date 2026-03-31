@@ -14,8 +14,15 @@ remain factual and traceable to source files.
 
 - `Status`: implemented
 - `User value`: turns raw hook events into meaningful dashboard state
-- `Source files`: `aggregator/src/aggregator/replay.py`, `aggregator/src/aggregator/state.py`
-- `Notes`: computes lifetime, daily, per-project, and recent-event views
+- `Source files`: `aggregator/src/aggregator/replay.py`, `aggregator/src/aggregator/insights.py`, `aggregator/src/aggregator/state.py`
+- `Notes`: computes lifetime, daily, per-project, recent-event, interpreted signal, and brief views
+
+## Momentum Brief Home
+
+- `Status`: shipped
+- `User value`: opens with an interpreted editorial-style home that explains growth, proof, and next direction faster than the old equal-weight dashboard
+- `Source files`: `dashboard/src/app.ts`, `dashboard/src/home.ts`, `dashboard/src/styles/app.css`, `dashboard/src/types.ts`, `aggregator/src/aggregator/insights.py`, `aggregator/src/aggregator/state.py`
+- `Notes`: home now centers on a dominant `Momentum Brief` hero, restrained proof rail, compact `Today` and cadence support, quieter recent-changes and project-context summaries, and deeper inspection links
 
 ## XP And Leveling
 
@@ -56,15 +63,15 @@ remain factual and traceable to source files.
 
 - `Status`: implemented
 - `User value`: shows which Cursor models the user relies on most
-- `Source files`: `aggregator/src/aggregator/replay.py`, `aggregator/src/aggregator/state.py`, `dashboard/src/app.ts`
-- `Notes`: populated from `sessionStart` model fields and rendered as a metric list
+- `Source files`: `aggregator/src/aggregator/replay.py`, `aggregator/src/aggregator/state.py`, `dashboard/src/home.ts`, `dashboard/src/app.ts`
+- `Notes`: populated from `sessionStart` model fields and available in deeper inspection rather than the default home path
 
 ## Activity Feed
 
 - `Status`: implemented
 - `User value`: surfaces recent progression events such as unlocks, level-ups, and streak changes
-- `Source files`: `aggregator/src/aggregator/state.py`, `dashboard/src/app.ts`
-- `Notes`: `state.json` keeps recent events and the dashboard renders them in reverse chronological order
+- `Source files`: `aggregator/src/aggregator/state.py`, `dashboard/src/home.ts`, `dashboard/src/app.ts`
+- `Notes`: `state.json` keeps recent events and home now renders them as a quieter recent-changes summary instead of a dominant feed card
 
 ## Real Vs Sample Data Mode
 
@@ -73,9 +80,37 @@ remain factual and traceable to source files.
 - `Source files`: `README.md`, `dashboard/src/api.ts`, `dashboard/src/data-source.ts`, `dashboard/src/app.ts`
 - `Notes`: selection persists in `localStorage`
 
+## Dashboard Runtime Startup
+
+- `Status`: implemented
+- `User value`: makes the dashboard reachable immediately after install without requiring a manual server command each time Cursor restarts
+- `Source files`: `scripts/install.sh`, `scripts/dev-server.sh`, `aggregator/src/aggregator/runtime.py`
+- `Notes`: install starts the local runtime, attempts OS-native startup registration, and the runtime serves the dashboard plus a tiny localhost settings API
+
+## Install-Time First Open
+
+- `Status`: implemented
+- `User value`: shows the product immediately after first install so users do not need to guess how to access Momentum
+- `Source files`: `scripts/install.sh`, `aggregator/src/aggregator/runtime.py`
+- `Notes`: first install opens the dashboard in the default browser once and records a marker so reinstalls do not keep reopening it
+
+## Dashboard Launch Preference
+
+- `Status`: implemented
+- `User value`: lets users opt into opening Momentum automatically when Cursor starts while keeping the default experience non-intrusive after first install
+- `Source files`: `collector/collector.sh`, `aggregator/src/aggregator/runtime.py`, `dashboard/src/preferences.ts`, `dashboard/src/settings.ts`, `dashboard/src/app.ts`
+- `Notes`: the recurring auto-open toggle is exposed in `Settings`, mirrored in `localStorage`, synced through the local runtime API, and only acts on `sessionStart`
+
 ## Lifetime Statistics View
 
 - `Status`: implemented
 - `User value`: provides an aggregate view of long-term usage
-- `Source files`: `aggregator/src/aggregator/replay.py`, `aggregator/src/aggregator/state.py`, `dashboard/src/app.ts`
-- `Notes`: includes sessions, lines, files, tools, builds, tests, loops, subagents, and compactions
+- `Source files`: `aggregator/src/aggregator/replay.py`, `aggregator/src/aggregator/state.py`, `dashboard/src/home.ts`, `dashboard/src/app.ts`
+- `Notes`: includes sessions, lines, files, tools, builds, tests, loops, subagents, compactions, `XP Sources`, `Languages Edited`, and `Models`; remains available as a deeper-inspection view rather than the primary home surface
+
+## Insight Contract
+
+- `Status`: shipped
+- `User value`: gives the dashboard a durable interpreted state layer instead of requiring home copy to be composed ad hoc from raw metrics
+- `Source files`: `aggregator/src/aggregator/insights.py`, `aggregator/src/aggregator/state.py`, `dashboard/src/types.ts`
+- `Notes`: `state.json` now includes `insights.signal_strength`, structured interpreted signals, and a `brief` payload with headline, summary, validation, cadence, focus, and proof modules

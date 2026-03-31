@@ -28,26 +28,39 @@ chmod +x scripts/install.sh
 
 The installer now merges the dashboard hooks into `~/.cursor/hooks.json` automatically and installs `~/.cursor/hooks/collector.sh`. Existing unrelated hooks are preserved.
 
-Run the aggregator (writes `~/.cursor/dashboard/state.json`):
+On first install, Momentum now also:
+
+- runs the aggregator once so `~/.cursor/dashboard/state.json` exists immediately when possible
+- registers a local dashboard startup entry for the current OS
+- starts the local dashboard runtime
+- opens the dashboard in your default browser once
+
+Check the runtime status and local URL:
 
 ```bash
-python3 ~/.cursor/dashboard/aggregate.py
+python3 -m aggregator.runtime status --runtime-dir ~/.cursor/dashboard
 ```
 
-Serve the static UI (same folder as `state.json` for same-origin `fetch`):
+Manual runtime start is still available for troubleshooting:
 
 ```bash
 chmod +x scripts/dev-server.sh
 ./scripts/dev-server.sh 7420
 ```
 
-Open [http://localhost:7420/](http://localhost:7420/).
+The runtime serves the dashboard from the same folder as `state.json`, so the app keeps same-origin access to both live and sample data.
 
 ## Real vs sample data
 
 - `Real` mode reads `~/.cursor/dashboard/state.json`, which is generated from your live Cursor hooks.
 - `Sample` mode reads the checked-in `sample-state.json`, which is safe for demos and does not expose your real usage data.
 - Use the header toggle in the dashboard to switch between them. The selected source is remembered in your browser with `localStorage`.
+
+## Settings
+
+- Momentum now includes a `Settings` tab.
+- `Open Momentum automatically when Cursor starts` is off by default after install.
+- First install still opens Momentum once automatically so the dashboard is immediately usable.
 
 ## Models section
 

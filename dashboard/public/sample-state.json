@@ -154,5 +154,102 @@
       "ts": "2026-03-31T11:55:00Z"
     }
   ],
+  "insights": {
+    "signal_strength": "high",
+    "signals": {
+      "consistency": {
+        "level": "strong",
+        "active_days_7d": 5,
+        "current_streak": 4
+      },
+      "recovery": {
+        "status": "steady",
+        "detected": false,
+        "current_streak": 4
+      },
+      "validation": {
+        "level": "strong",
+        "tests_run": 2,
+        "builds_run": 1,
+        "completed_sessions": 4
+      },
+      "projectMomentum": {
+        "level": "broad",
+        "active_projects_7d": 2,
+        "tracked_projects": 2
+      },
+      "growthDirection": {
+        "key": "steady_growth",
+        "label": "Steady growth"
+      },
+      "focus": {
+        "key": "reliability",
+        "label": "Keep reinforcing repeatable workflows",
+        "reason": "The strongest signals come from steady sessions plus successful build and test follow-through."
+      }
+    },
+    "brief": {
+      "confidence": "high",
+      "headline": "Your workflow is getting steadier",
+      "summary": "Recent activity suggests consistent follow-through across meaningful coding work.",
+      "growth_direction": {
+        "key": "steady_growth",
+        "label": "Steady growth"
+      },
+      "validation": {
+        "statement": "The strongest proof right now comes from recent active days, current streak.",
+        "evidence": [
+          {
+            "key": "consistency",
+            "label": "Recent active days",
+            "value": "5",
+            "detail": "Active on 5 of the last 7 days."
+          },
+          {
+            "key": "streak",
+            "label": "Current streak",
+            "value": "4",
+            "detail": "Current active-day streak is 4."
+          },
+          {
+            "key": "reliability",
+            "label": "Successful checks",
+            "value": "3",
+            "detail": "2 tests and 1 build completed successfully in the last 7 days."
+          }
+        ]
+      },
+      "momentum": {
+        "key": "momentum",
+        "label": "Momentum looks stable",
+        "detail": "Recent cadence is holding, with a current streak of 4 active days."
+      },
+      "focus": {
+        "key": "reliability",
+        "label": "Keep reinforcing repeatable workflows",
+        "reason": "The strongest signals come from steady sessions plus successful build and test follow-through."
+      },
+      "proof_modules": [
+        {
+          "key": "consistency",
+          "label": "Recent active days",
+          "value": "5",
+          "detail": "Active on 5 of the last 7 days."
+        },
+        {
+          "key": "streak",
+          "label": "Current streak",
+          "value": "4",
+          "detail": "Current active-day streak is 4."
+        },
+        {
+          "key": "reliability",
+          "label": "Successful checks",
+          "value": "3",
+          "detail": "2 tests and 1 build completed successfully in the last 7 days."
+        }
+      ]
+    }
+  },
   "last_aggregated_at": "2026-03-31T15:00:00Z"
 }

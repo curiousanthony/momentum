@@ -1,22 +1,19 @@
 import { loadState } from "./api";
 import { loadStoredDataSource, saveDataSource, type DataSource } from "./data-source";
-import { getSortedModelUsage } from "./model-usage";
+import { renderHomeView, renderLanguageUsage, renderModelUsage, renderXpBreakdown } from "./home";
+import {
+  loadRuntimePreferences,
+  loadStoredPreferences,
+  saveRuntimePreferences,
+  saveStoredPreferences,
+  type DashboardPreferences,
+} from "./preferences";
+import { renderSettingsPanel, type SettingsStatus } from "./settings";
 import type { DashboardState } from "./types";
 import "./styles/app.css";
 
 const $ = (id: string) => document.getElementById(id);
 const fmt = (n: number | undefined | null) => (n ?? 0).toLocaleString();
-
-const LANG_COLORS = [
-  "#7c6af7",
-  "#4fc8a0",
-  "#f5a623",
-  "#e05c5c",
-  "#5cb8f5",
-  "#b46cf5",
-  "#f5c45c",
-  "#5cf5a4",
-];
 
 const LEVEL_TITLES = [
   "",
@@ -68,28 +65,12 @@ const ACH_ICONS: Record<string, string> = {
   project_veteran: "🎖️",
 };
 
-const BD_LABELS: Record<string, string> = {
-  lines_added: "Lines added",
-  files_edited: "Files edited",
-  tab_accepted: "Tab completions",
-  sessions_completed: "Sessions completed",
-  daily_logins: "Daily logins",
-  streak_bonuses: "Streak bonuses",
-  commands_run: "Commands run",
-  test_passes: "Tests passed",
-  build_successes: "Builds",
-  agent_loops: "Agent loops",
-  subagents_completed: "Subagents",
-  tool_calls: "Tool calls",
-  compactions: "Compactions",
-  prompts_submitted: "Prompts",
-  achievements: "Achievements",
-  first_edits_day: "First edit of day",
-  languages: "New languages",
-};
-
 let prevState: DashboardState | null = null;
 let currentSource: DataSource = loadStoredDataSource();
+let currentPreferences: DashboardPreferences = loadStoredPreferences();
+let settingsStatus: SettingsStatus = null;
+const TAB_NAMES = ["overview", "achievements", "projects", "stats", "settings"] as const;
+type TabName = (typeof TAB_NAMES)[number];
 
 function showToast(msg: string, type = ""): void {
   const c = $("toast-container");
@@ -122,107 +103,35 @@ function diffAndNotify(state: DashboardState): void {
   prevState = state;
 }
 
-function switchTab(name: string, btn: HTMLElement): void {
-  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-  $(`tab-${name}`)?.classList.add("active");
-  btn.classList.add("active");
+function switchTab(name: TabName, btn: HTMLElement, focusTarget: "tab" | "panel" = "tab"): void {
+  document.querySelectorAll<HTMLElement>(".tab-panel").forEach((panel) => {
+    const isActive = panel.id === `tab-${name}`;
+    panel.classList.toggle("active", isActive);
+    panel.hidden = !isActive;
+    panel.setAttribute("tabindex", isActive ? "0" : "-1");
+  });
+
+  document.querySelectorAll<HTMLElement>(".tab-btn").forEach((button) => {
+    const isActive = button === btn;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+    button.setAttribute("tabindex", isActive ? "0" : "-1");
+  });
+
+  if (focusTarget === "panel") {
+    $(`tab-${name}`)?.focus();
+    return;
+  }
+
+  btn.focus();
 }
 
 function renderOverview(s: DashboardState): void {
   $("user-email")!.textContent = s.user?.email ?? "—";
-  $("level-num")!.textContent = String(s.xp.level);
-  $("level-title")!.textContent = levelTitle(s.xp.level);
-  $("level-xp-label")!.textContent = `${fmt(s.xp.total)} total XP`;
-  $("xp-bar")!.style.width = `${s.xp.xp_progress_pct}%`;
-  $("xp-floor")!.textContent = fmt(s.xp.xp_current_level);
-  $("xp-ceil")!.textContent = fmt(s.xp.xp_next_level);
-  $("xp-pct")!.textContent = `${s.xp.xp_progress_pct}%`;
-
-  $("streak-count")!.textContent = String(s.streaks.current_daily_streak);
-  $("streak-best")!.textContent = `Best: ${s.streaks.longest_daily_streak} days`;
-  $("streak-last")!.textContent = `Last active: ${s.streaks.last_active_date ?? "—"}`;
-  $("streak-clean")!.textContent = String(s.streaks.current_clean_streak);
-
-  $("today-xp")!.textContent = fmt(s.today.xp_earned);
-  $("today-sessions")!.textContent = fmt(s.today.sessions);
-  $("today-lines")!.textContent = fmt(s.today.lines_added);
-  $("today-tabs")!.textContent = fmt(s.today.tab_completions);
-  $("today-cmds")!.textContent = fmt(s.today.commands_run);
-  $("today-tools")!.textContent = fmt(s.today.tool_calls);
-
-  const bd = s.xp.breakdown ?? {};
-  const maxXP = Math.max(...Object.values(bd), 1);
-  $("xp-breakdown")!.innerHTML = Object.entries(bd)
-    .sort((a, b) => b[1] - a[1])
-    .map(
-      ([k, v]) => `
-      <div class="breakdown-row">
-        <span class="breakdown-label">${BD_LABELS[k] ?? k}</span>
-        <div class="breakdown-track">
-          <div class="breakdown-fill" style="width:${Math.round((v / maxXP) * 100)}%"></div>
-        </div>
-        <span class="breakdown-val">${fmt(v)}</span>
-      </div>`,
-    )
-    .join("");
-
-  const feed = s.recent_events ?? [];
-  $("activity-feed")!.innerHTML = feed.length
-    ? feed
-        .slice()
-        .reverse()
-        .map((ev) => {
-          const t = String(ev.type ?? "");
-          const dotClass =
-            t === "achievement_unlocked" ? "achievement" : t === "level_up" ? "levelup" : "";
-          let text = t;
-          if (t === "achievement_unlocked") text = `Achievement: ${String(ev.id)}`;
-          else if (t === "level_up") text = `Reached Level ${String(ev.level)}`;
-          else if (t === "xp_earned") text = `+${fmt(ev.amount as number)} XP — ${String(ev.reason)}`;
-          else if (t === "streak_extended") text = `Streak extended to ${String(ev.streak)} days`;
-          const time = ev.ts ? new Date(String(ev.ts)).toLocaleTimeString() : "";
-          return `<div class="feed-item">
-          <div class="feed-dot ${dotClass}"></div>
-          <span>${text}</span>
-          <span class="feed-time">${time}</span>
-        </div>`;
-        })
-        .join("")
-    : '<div class="muted small">No recent events yet.</div>';
-
-  const langs = (s.lifetime.languages as Record<string, number>) ?? {};
-  const maxL = Math.max(...Object.values(langs), 1);
-  $("lang-list")!.innerHTML = Object.entries(langs)
-    .sort((a, b) => b[1] - a[1])
-    .map(
-      ([lang, count], i) => `
-      <div class="lang-row">
-        <span class="lang-name">.${lang}</span>
-        <div class="lang-track">
-          <div class="lang-fill" style="width:${Math.round((count / maxL) * 100)}%;background:${LANG_COLORS[i % LANG_COLORS.length]}"></div>
-        </div>
-        <span class="lang-count">${fmt(count)}</span>
-      </div>`,
-    )
-    .join("");
-
-  const models = getSortedModelUsage(s.lifetime.models_used);
-  const maxModelCount = Math.max(...models.map(([, count]) => count), 1);
-  $("model-list")!.innerHTML = models.length
-    ? models
-        .map(
-          ([name, count], i) => `
-      <div class="metric-row">
-        <span class="metric-name">${name}</span>
-        <div class="metric-track">
-          <div class="metric-fill" style="width:${Math.round((count / maxModelCount) * 100)}%;background:${LANG_COLORS[i % LANG_COLORS.length]}"></div>
-        </div>
-        <span class="metric-count">${fmt(count)}</span>
-      </div>`,
-        )
-        .join("")
-    : '<div class="muted small">No model usage data yet.</div>';
+  $("tab-overview")!.innerHTML = renderHomeView(s);
+  $("xp-breakdown")!.innerHTML = renderXpBreakdown(s);
+  $("lang-list")!.innerHTML = renderLanguageUsage(s);
+  $("model-list")!.innerHTML = renderModelUsage(s);
 }
 
 function renderAchievements(s: DashboardState): void {
@@ -340,7 +249,11 @@ function renderLifetime(s: DashboardState): void {
   ).join("");
 }
 
-function shell(): string {
+function renderSettings(): void {
+  $("tab-settings")!.innerHTML = renderSettingsPanel(currentPreferences, settingsStatus);
+}
+
+export function renderShell(): string {
   return `
 <div id="toast-container" aria-live="polite"></div>
 <header class="header">
@@ -355,73 +268,16 @@ function shell(): string {
   </div>
 </header>
 <nav class="tabs" role="tablist">
-  <button type="button" class="tab-btn active" data-tab="overview" role="tab" aria-selected="true">Overview</button>
-  <button type="button" class="tab-btn" data-tab="achievements" role="tab">Achievements</button>
-  <button type="button" class="tab-btn" data-tab="projects" role="tab">Projects</button>
-  <button type="button" class="tab-btn" data-tab="stats" role="tab">Lifetime Stats</button>
+  <button type="button" class="tab-btn active" id="tab-btn-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="tab-overview" tabindex="0">Home</button>
+  <button type="button" class="tab-btn" id="tab-btn-achievements" data-tab="achievements" role="tab" aria-selected="false" aria-controls="tab-achievements" tabindex="-1">Achievements</button>
+  <button type="button" class="tab-btn" id="tab-btn-projects" data-tab="projects" role="tab" aria-selected="false" aria-controls="tab-projects" tabindex="-1">Projects</button>
+  <button type="button" class="tab-btn" id="tab-btn-stats" data-tab="stats" role="tab" aria-selected="false" aria-controls="tab-stats" tabindex="-1">Lifetime Stats</button>
+  <button type="button" class="tab-btn" id="tab-btn-settings" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings" tabindex="-1">Settings</button>
 </nav>
 
-<div class="tab-panel active grid" id="tab-overview">
-  <div class="card">
-    <h2>Level</h2>
-    <div class="level-badge">
-      <div class="level-number" id="level-num">—</div>
-      <div>
-        <div class="level-title" id="level-title">—</div>
-        <div class="level-label" id="level-xp-label">0 / 0 XP</div>
-      </div>
-    </div>
-    <div class="xp-bar-wrap">
-      <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div>
-      <div class="xp-bar-labels">
-        <span id="xp-floor">0</span>
-        <span id="xp-pct">0%</span>
-        <span id="xp-ceil">0</span>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Daily Streak</h2>
-    <div class="streak-row">
-      <div class="streak-count" id="streak-count">—</div>
-      <div>
-        <div class="streak-label">days active</div>
-        <div class="streak-meta" id="streak-best">Best: —</div>
-        <div class="streak-meta" id="streak-last">Last active: —</div>
-        <div class="streak-meta">Clean streak: <span id="streak-clean">—</span> days</div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Today</h2>
-    <div class="today-grid">
-      <div class="stat-tile"><div class="stat-value" id="today-xp">—</div><div class="stat-label">XP earned</div></div>
-      <div class="stat-tile"><div class="stat-value" id="today-sessions">—</div><div class="stat-label">Sessions</div></div>
-      <div class="stat-tile"><div class="stat-value" id="today-lines">—</div><div class="stat-label">Lines added</div></div>
-      <div class="stat-tile"><div class="stat-value" id="today-tabs">—</div><div class="stat-label">Tab accepts</div></div>
-      <div class="stat-tile"><div class="stat-value" id="today-cmds">—</div><div class="stat-label">Commands</div></div>
-      <div class="stat-tile"><div class="stat-value" id="today-tools">—</div><div class="stat-label">Tool calls</div></div>
-    </div>
-  </div>
-  <div class="card wide">
-    <h2>XP Sources</h2>
-    <div class="breakdown-list" id="xp-breakdown"></div>
-  </div>
-  <div class="card">
-    <h2>Recent Activity</h2>
-    <div class="feed-list" id="activity-feed"></div>
-  </div>
-  <div class="card">
-    <h2>Languages Edited</h2>
-    <div class="lang-list" id="lang-list"></div>
-  </div>
-  <div class="card">
-    <h2>Models</h2>
-    <div class="metric-list" id="model-list"></div>
-  </div>
-</div>
+<div class="tab-panel active" id="tab-overview" role="tabpanel" aria-labelledby="tab-btn-overview" tabindex="0"></div>
 
-<div class="tab-panel grid" id="tab-achievements">
+<div class="tab-panel grid" id="tab-achievements" role="tabpanel" aria-labelledby="tab-btn-achievements" tabindex="-1" hidden>
   <div class="card full">
     <h2>Unlocked <span id="ach-count" class="accent2"></span></h2>
     <div class="ach-list" id="ach-unlocked"></div>
@@ -436,7 +292,7 @@ function shell(): string {
   </div>
 </div>
 
-<div class="tab-panel grid" id="tab-projects">
+<div class="tab-panel grid" id="tab-projects" role="tabpanel" aria-labelledby="tab-btn-projects" tabindex="-1" hidden>
   <div class="card full scroll-x">
     <h2>Per-Project Stats</h2>
     <table class="proj-table">
@@ -448,22 +304,48 @@ function shell(): string {
   </div>
 </div>
 
-<div class="tab-panel grid" id="tab-stats">
+<div class="tab-panel grid" id="tab-stats" role="tabpanel" aria-labelledby="tab-btn-stats" tabindex="-1" hidden>
   <div class="card full">
     <h2>Lifetime Statistics</h2>
     <div class="stat-grid" id="lifetime-grid"></div>
   </div>
+  <div class="card">
+    <h2>XP Sources</h2>
+    <div class="breakdown-list" id="xp-breakdown"></div>
+  </div>
+  <div class="card">
+    <h2>Languages Edited</h2>
+    <div class="lang-list" id="lang-list"></div>
+  </div>
+  <div class="card">
+    <h2>Models</h2>
+    <div class="metric-list" id="model-list"></div>
+  </div>
 </div>
+
+<div class="tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tab-btn-settings" tabindex="-1" hidden></div>
 `;
 }
 
 export function mountApp(root: HTMLElement): void {
-  root.innerHTML = shell();
+  root.innerHTML = renderShell();
   document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const name = btn.dataset.tab;
-      if (name) switchTab(name, btn);
+      if (name && TAB_NAMES.includes(name as TabName)) {
+        switchTab(name as TabName, btn);
+      }
     });
+  });
+  document.body.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const button = target.closest<HTMLButtonElement>(".tab-jump");
+    if (!button) return;
+    const name = button.dataset.targetTab;
+    if (!name || !TAB_NAMES.includes(name as TabName)) return;
+    const tabButton = document.querySelector<HTMLElement>(`.tab-btn[data-tab="${name}"]`);
+    if (tabButton) switchTab(name as TabName, tabButton, "panel");
   });
   document.querySelectorAll<HTMLButtonElement>(".source-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -477,8 +359,16 @@ export function mountApp(root: HTMLElement): void {
     });
   });
   $("btn-refresh")?.addEventListener("click", () => refresh());
+  document.body.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.id !== "setting-open-on-cursor-start") return;
+    void persistOpenOnCursorStart(target.checked);
+  });
 
   syncSourceButtons();
+  renderSettings();
+  void hydrateRuntimePreferences();
   void refresh();
   setInterval(() => void refresh(), 30_000);
 }
@@ -497,10 +387,51 @@ async function refresh(): Promise<void> {
   renderAchievements(state);
   renderProjects(state);
   renderLifetime(state);
+  renderSettings();
 }
 
 function syncSourceButtons(): void {
   document.querySelectorAll<HTMLButtonElement>(".source-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.source === currentSource);
   });
+}
+
+async function hydrateRuntimePreferences(): Promise<void> {
+  try {
+    currentPreferences = await loadRuntimePreferences();
+    saveStoredPreferences(currentPreferences);
+    settingsStatus = null;
+  } catch {
+    settingsStatus = {
+      kind: "error",
+      message: "Could not reach the local runtime settings yet. Local fallback is active.",
+    };
+  }
+  renderSettings();
+}
+
+async function persistOpenOnCursorStart(enabled: boolean): Promise<void> {
+  const previous = currentPreferences;
+  currentPreferences = { openOnCursorStart: enabled };
+  saveStoredPreferences(currentPreferences);
+  settingsStatus = null;
+  renderSettings();
+
+  try {
+    currentPreferences = await saveRuntimePreferences(currentPreferences);
+    saveStoredPreferences(currentPreferences);
+    settingsStatus = {
+      kind: "success",
+      message: "Launch preference saved.",
+    };
+  } catch {
+    currentPreferences = previous;
+    saveStoredPreferences(currentPreferences);
+    settingsStatus = {
+      kind: "error",
+      message: "Could not save the launch preference to the local runtime.",
+    };
+  }
+
+  renderSettings();
 }

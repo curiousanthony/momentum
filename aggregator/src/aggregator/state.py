@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from aggregator import achievements, xp as xp_rules
+from aggregator.insights import build_insights
 from aggregator.replay import ReplayResult, longest_daily_streak
 
 RECENT_EVENTS_CAP = 50
@@ -176,6 +177,7 @@ def build_state(
         "recent_events": recent,
         "last_aggregated_at": now_iso,
     }
+    state["insights"] = build_insights(r, projects_out, events)
 
     return state
 

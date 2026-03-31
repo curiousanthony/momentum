@@ -880,14 +880,17 @@ Or add a cron job for every 15 minutes regardless:
 
 A single self-contained HTML file that reads state.json via a tiny local server and renders everything. No framework needed.
 
-### Local server (one command)
+### Local runtime
 
 ```py
-# From ~/.cursor/dashboard/
-python3 -m http.server 7420
+# Normal install path:
+# the installer starts the local runtime and opens Momentum once automatically.
+#
+# Manual fallback:
+python3 -m aggregator.runtime start --runtime-dir ~/.cursor/dashboard --port 7420
 ```
 
-Then open `http://localhost:7420/dashboard.html`.
+Then open the local URL reported by `python3 -m aggregator.runtime status --runtime-dir ~/.cursor/dashboard`.
 
 `~/.cursor/dashboard/dashboard.html`
 
@@ -1865,7 +1868,7 @@ Then open `http://localhost:7420/dashboard.html`.
 			async function loadState() {
 				let state
 				try {
-					// Fetch state.json served by the local python http.server
+					// Fetch state.json served by the local Momentum runtime
 					const res = await fetch("./state.json?_=" + Date.now())
 					if (!res.ok) throw new Error(`HTTP ${res.status}`)
 					state = await res.json()
@@ -1904,7 +1907,8 @@ Here is every file this system creates and what it does:
     ├── events.jsonl               ← raw append-only event log (one JSON per line)
     ├── aggregate.py               ← reads events.jsonl, writes state.json
     ├── state.json                 ← aggregated game state, read by dashboard
-    └── dashboard.html             ← self-contained dashboard UI
+    ├── runtime-config.json        ← local runtime config and launch preferences
+    └── index.html                 ← built dashboard UI entrypoint
 ```
 
 ## 10. Getting It Running End to End
@@ -1913,12 +1917,11 @@ Here is every file this system creates and what it does:
 # 1. Make the collector executable
 chmod +x ~/.cursor/hooks/collector.sh
 # 2. Do some work in Cursor — edit files, run commands, chat with the agent
-# 3. Run the aggregator manually the first time
-python3 ~/.cursor/dashboard/aggregate.py
-# 4. Start the local server
-cd ~/.cursor/dashboard && python3 -m http.server 7420
-# 5. Open your dashboard
-open http://localhost:7420/dashboard.html
+# 3. Run the installer from the repo after building the dashboard
+./scripts/install.sh
+# 4. Check the local dashboard runtime status
+python3 -m aggregator.runtime status --runtime-dir ~/.cursor/dashboard
+# 5. The installer opens your dashboard once automatically on first install
 # 6. Optional: auto-aggregate every 15 minutes via cron
 # Run: crontab -e  then add:
 # */15 * * * * python3 ~/.cursor/dashboard/aggregate.py >> ~/.cursor/dashboard/aggregate.log 2>&1
